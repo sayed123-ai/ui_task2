@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>M&amp;M-Nitte — Mentorship OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ================================================================
+   LUMEN — design system
+   ================================================================ */
+:root{
+  --bg:#05060e;
+  --ink:#eef0ff;
+  --muted:#8b91b8;
+  --glass:rgba(255,255,255,.045);
+  --glass2:rgba(255,255,255,.08);
+  --border:rgba(255,255,255,.09);
+  --c1:#7c6cff;
+  --c2:#2dd4bf;
+  --c3:#f472b6;
+  --c4:#fbbf24;
+  --danger:#fb7185;
+  --r:16px;
+  --sidebar-w:250px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+::selection{background:rgba(124,108,255,.4)}
+::-webkit-scrollbar{width:9px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:10px}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--bg);color:var(--ink);
+  min-height:100vh;overflow-x:hidden;
+}
+h1,h2,h3,h4,.sora{font-family:'Sora',sans-serif;letter-spacing:-.02em}
+.hidden{display:none!important}
+.muted{color:var(--muted)}
+
+/* ---------- ambient background ---------- */
+.mesh{position:fixed;inset:0;z-index:-3;overflow:hidden}
+.mesh i{position:absolute;border-radius:50%;filter:blur(110px);opacity:.32;mix-blend-mode:screen;animation:float 24s ease-in-out infinite alternate}
+.mesh i:nth-child(1){width:44vmax;height:44vmax;background:#4c2fd8;top:-14%;left:-8%}
+.mesh i:nth-child(2){width:38vmax;height:38vmax;background:#0d7d74;top:34%;right:-12%;animation-delay:-9s}
+.mesh i:nth-child(3){width:36vmax;height:36vmax;background:#a1287d;bottom:-18%;left:24%;animation-delay:-16s}
+.mesh i:nth-child(4){width:26vmax;height:26vmax;background:#8a5a13;top:62%;left:-10%;animation-delay:-4s}
+@keyframes float{0%{transform:translate(0,0) scale(1)}50%{transform:translate(7vw,-6vh) scale(1.14)}100%{transform:translate(-5vw,6vh) scale(.93)}}
+.gridlines{position:fixed;inset:0;z-index:-2;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:56px 56px;
+  mask-image:radial-gradient(ellipse 90% 70% at 50% 30%,#000 30%,transparent 75%);
+  -webkit-mask-image:radial-gradient(ellipse 90% 70% at 50% 30%,#000 30%,transparent 75%);}
+.noise{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.6;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* ---------- glass primitives ---------- */
+.glass{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.hoverable{transition:transform .35s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .35s}
+.hoverable:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.2);
+  box-shadow:0 26px 70px rgba(0,0,0,.5),0 0 0 1px rgba(124,108,255,.15)}
+.grad-text{background:linear-gradient(100deg,var(--c1) 0%,var(--c2) 45%,var(--c3) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ---------- buttons ---------- */
+.btn{position:relative;overflow:hidden;border:none;cursor:pointer;font:inherit;font-weight:600;
+  font-size:.92rem;padding:12px 24px;border-radius:12px;color:#fff;
+  background:linear-gradient(120deg,var(--c1),#9d5cff 55%,var(--c3));
+  box-shadow:0 10px 30px rgba(124,108,255,.35);
+  transition:transform .2s,box-shadow .25s,opacity .2s}
+.btn::after{content:"";position:absolute;top:0;left:-80%;width:50%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);
+  transform:skewX(-20deg);transition:left .5s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(124,108,255,.5)}
+.btn:hover::after{left:130%}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-teal{background:linear-gradient(120deg,#0f766e,var(--c2));box-shadow:0 10px 30px rgba(45,212,191,.25)}
+.btn-ghost{background:var(--glass2);box-shadow:none;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{color:#fff;border-color:rgba(255,255,255,.3);box-shadow:none}
+.btn-sm{padding:8px 16px;font-size:.82rem;border-radius:10px}
+.btn-block{width:100%;margin-top:6px}
+.link{color:var(--c2);cursor:pointer;font:inherit;font-size:.88rem;background:none;border:none}
+
+/* ---------- forms ---------- */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.15em;
+  color:var(--muted);margin-bottom:7px;font-weight:600}
+input,select,textarea{width:100%;padding:12px 14px;border-radius:12px;color:var(--ink);
+  background:rgba(255,255,255,.05);border:1px solid var(--border);font:inherit;font-size:.95rem;
+  outline:none;transition:border-color .25s,box-shadow .25s,background .25s}
+input:hover,select:hover,textarea:hover{background:rgba(255,255,255,.075)}
+input:focus,select:focus,textarea:focus{border-color:var(--c1);
+  box-shadow:0 0 0 4px rgba(124,108,255,.16)}
+textarea{min-height:110px;resize:vertical;line-height:1.55}
+select option{background:#12131f}
+.skill-picker{position:relative}
+.skill-trigger{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 14px;border-radius:12px;color:var(--ink);background:rgba(255,255,255,.05);
+  border:1px solid var(--border);font:inherit;font-size:.95rem;cursor:pointer;text-align:left}
+.skill-trigger:hover{background:rgba(255,255,255,.075);border-color:rgba(255,255,255,.2)}
+.skill-trigger span:last-child{color:var(--muted);font-size:.8rem;transition:transform .2s}
+.skill-picker.open .skill-trigger{border-color:var(--c1);box-shadow:0 0 0 4px rgba(124,108,255,.16)}
+.skill-picker.open .skill-trigger span:last-child{transform:rotate(180deg)}
+.skill-menu{display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:20;
+  max-height:260px;overflow-y:auto;padding:7px;background:#12131f;border:1px solid var(--border);
+  border-radius:12px;box-shadow:0 20px 45px rgba(0,0,0,.5)}
+.skill-picker.open .skill-menu{display:block}
+.skill-option{display:flex!important;align-items:center;gap:10px;padding:9px 10px;margin:0!important;
+  color:var(--ink)!important;font-size:.85rem!important;text-transform:none!important;letter-spacing:0!important;
+  border-radius:8px;cursor:pointer}
+.skill-option:hover{background:var(--glass2)}
+.skill-option input{width:16px;height:16px;accent-color:var(--c1)}
+
+/* ---------- landing / auth ---------- */
+.landing{max-width:1180px;margin:0 auto;padding:0 24px}
+.hero{min-height:100vh;display:grid;grid-template-columns:1.05fr .95fr;gap:60px;align-items:center}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:7px 16px;border-radius:100px;
+  background:var(--glass);border:1px solid var(--border);font-size:.78rem;font-weight:600;
+  color:var(--muted);letter-spacing:.08em;margin-bottom:26px}
+.eyebrow .pulse{width:8px;height:8px;border-radius:50%;background:var(--c2);
+  box-shadow:0 0 0 0 rgba(45,212,191,.6);animation:pulse 2s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 10px rgba(45,212,191,0)}}
+.hero h1{font-size:clamp(2.6rem,5.4vw,4.2rem);line-height:1.06;font-weight:800}
+.hero .sub{color:var(--muted);max-width:480px;margin:22px 0 32px;font-size:1.05rem;line-height:1.65}
+.role-pills{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:26px}
+.pill{padding:11px 22px;border-radius:100px;cursor:pointer;font-weight:600;font-size:.9rem;
+  border:1px solid var(--border);background:var(--glass);color:var(--muted);
+  transition:all .25s;user-select:none}
+.pill:hover{color:#fff;border-color:rgba(255,255,255,.25)}
+.pill.active{color:#fff;border-color:transparent;
+  background:linear-gradient(120deg,var(--c1),var(--c3));box-shadow:0 8px 28px rgba(124,108,255,.45)}
+.hero-points{display:flex;gap:26px;margin-top:34px;flex-wrap:wrap}
+.hp{display:flex;gap:10px;align-items:center;font-size:.86rem;color:var(--muted)}
+.hp b{color:var(--ink)}
+.hp .ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:1rem;
+  background:var(--glass2);border:1px solid var(--border)}
+
+/* auth card */
+.auth{padding:32px;max-width:440px;margin-left:auto}
+.auth h3{font-size:1.3rem;margin-bottom:4px}
+.auth-switch{margin-top:16px;text-align:center;color:var(--muted);font-size:.88rem}
+.auth-tools{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+.profile-meter{margin-top:18px;padding:18px 20px;border-radius:14px;background:var(--glass);border:1px solid var(--border)}
+.profile-meter .meter-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}
+.profile-meter .meter-head b{font-size:.9rem}.profile-meter .meter-head span{color:var(--c2);font-size:.82rem;font-weight:700}
+.meter-track{height:8px;border-radius:10px;background:rgba(255,255,255,.08);overflow:hidden}
+.meter-track i{display:block;height:100%;border-radius:10px;background:linear-gradient(90deg,var(--c1),var(--c2));transition:width .4s}
+
+/* floating preview stack */
+.preview{position:relative;height:480px;perspective:1200px}
+.pv-card{position:absolute;padding:20px 22px;width:280px;will-change:transform;transition:transform .3s ease-out}
+.pv-1{top:20px;left:10px;transform:rotate(-4deg);z-index:3}
+.pv-2{top:170px;right:0;transform:rotate(3deg);z-index:2}
+.pv-3{top:320px;left:60px;transform:rotate(-2deg);z-index:1}
+.pv-card .row2{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.pv-card .lbl{font-size:.68rem;text-transform:uppercase;letter-spacing:.15em;color:var(--muted)}
+.pv-bar{height:8px;border-radius:10px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:8px}
+.pv-bar i{display:block;height:100%;border-radius:10px;
+  background:linear-gradient(90deg,var(--c1),var(--c2));animation:bar 3s ease-in-out infinite alternate}
+@keyframes bar{from{width:45%}to{width:88%}}
+.float-anim{animation:levitate 7s ease-in-out infinite}
+.pv-2.float-anim{animation-delay:-2.5s}.pv-3.float-anim{animation-delay:-5s}
+@keyframes levitate{0%,100%{margin-top:0}50%{margin-top:-14px}}
+
+/* ---------- app shell (sidebar) ---------- */
+.shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr;min-height:100vh}
+.sidebar{position:sticky;top:0;height:100vh;padding:22px 16px;display:flex;flex-direction:column;
+  border-right:1px solid var(--border);background:rgba(5,6,14,.6);backdrop-filter:blur(20px)}
+.brand{display:flex;align-items:center;gap:11px;padding:4px 10px 22px}
+.brand-mark{width:64px;height:40px;border-radius:10px;display:grid;place-items:center;
+  font-family:'Sora';font-weight:800;font-size:.82rem;letter-spacing:.02em;color:#fff;
+  background:linear-gradient(135deg,var(--c1),var(--c3));
+  box-shadow:0 6px 20px rgba(124,108,255,.5)}
+.brand b{font-family:'Sora';font-size:1.1rem}
+.brand small{display:block;font-size:.6rem;letter-spacing:.3em;color:var(--muted);text-transform:uppercase}
+.snav{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.snav button{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;
+  border:none;background:none;color:var(--muted);font:inherit;font-size:.92rem;font-weight:500;
+  cursor:pointer;transition:all .22s;text-align:left}
+.snav button:hover{color:#fff;background:var(--glass2)}
+.snav button.active{color:#fff;background:linear-gradient(120deg,rgba(124,108,255,.28),rgba(244,114,182,.18));
+  border:1px solid rgba(124,108,255,.35)}
+.snav button.active .ico{background:linear-gradient(135deg,var(--c1),var(--c3));border:none;color:#fff}
+.snav .ico{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:.95rem;
+  background:var(--glass2);border:1px solid var(--border);transition:all .22s}
+.sidebar-foot{margin-top:auto;padding:14px;border-radius:14px;background:var(--glass);border:1px solid var(--border)}
+.sidebar-foot .row{display:flex;gap:11px;align-items:center}
+.sidebar-foot .who{flex:1;min-width:0}
+.sidebar-foot .who b{display:block;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-foot .who span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+
+.main{padding:34px 38px 80px;max-width:1040px;width:100%;margin:0 auto}
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;
+  flex-wrap:wrap;margin-bottom:26px}
+.page-head h2{font-size:1.75rem;font-weight:700}
+.page-head p{color:var(--muted);font-size:.92rem;margin-top:4px}
+.search-box{max-width:320px;min-width:220px}
+
+/* ---------- cards / grids ---------- */
+.grid{display:grid;gap:18px}
+.g3{grid-template-columns:repeat(auto-fill,minmax(270px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+.pad{padding:24px}
+.stat{position:relative;overflow:hidden}
+.stat::after{content:"";position:absolute;width:130px;height:130px;border-radius:50%;
+  right:-42px;top:-42px;opacity:.3;filter:blur(3px)}
+.stat.s1::after{background:var(--c1)}.stat.s2::after{background:var(--c2)}
+.stat.s3::after{background:var(--c3)}.stat.s4::after{background:var(--c4)}
+.stat .num{font-family:'Sora';font-size:2.3rem;font-weight:800}
+.stat .lbl{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.16em;margin-top:2px}
+
+.avatar{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-weight:700;
+  font-family:'Sora';color:#fff;flex-shrink:0;font-size:.95rem;
+  background:linear-gradient(135deg,var(--c1),var(--c2))}
+.row{display:flex;gap:13px;align-items:center}
+.grow{flex:1;min-width:0}
+
+.kv{display:grid;grid-template-columns:135px 1fr;gap:8px 16px;font-size:.9rem;margin:16px 0}
+.kv dt{color:var(--muted)}
+.kv dd{word-break:break-word}
+.hod-mentee-grid{grid-template-columns:repeat(auto-fill,minmax(285px,1fr))}
+.hod-mentee-card{padding:18px;cursor:pointer}
+.hod-mentee-card h3{font-size:1rem}
+.hod-mentee-card .kv{grid-template-columns:82px 1fr;gap:6px 10px;font-size:.78rem;margin:13px 0 0}
+.hod-mentee-card .chip{padding:3px 8px;font-size:.68rem;margin:2px 2px 2px 0}
+.hod-mentee-card .kv dd{line-height:1.35;max-height:42px;overflow:hidden}
+.hr{height:1px;background:var(--border);margin:16px 0;border:none}
+
+.chip{display:inline-block;padding:4px 13px;border-radius:100px;font-size:.75rem;font-weight:600;
+  background:rgba(124,108,255,.16);border:1px solid rgba(124,108,255,.38);color:#c9c2ff;margin:3px 4px 3px 0}
+.tag{padding:4px 11px;border-radius:100px;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
+.tag.pending{background:rgba(251,191,36,.13);color:var(--c4);border:1px solid rgba(251,191,36,.4)}
+.tag.endorsed{background:rgba(45,212,191,.13);color:var(--c2);border:1px solid rgba(45,212,191,.4)}
+.tag.strength{background:rgba(45,212,191,.1);color:var(--c2);border:1px solid rgba(45,212,191,.32)}
+.tag.improvement{background:rgba(251,113,133,.1);color:var(--danger);border:1px solid rgba(251,113,133,.32)}
+.tag.goal{background:rgba(244,114,182,.1);color:var(--c3);border:1px solid rgba(244,114,182,.32)}
+.tag.general{background:rgba(139,145,184,.1);color:var(--muted);border:1px solid rgba(139,145,184,.28)}
+
+.feed-item{padding:20px 22px;margin-bottom:14px}
+.feed-item .meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;flex-wrap:wrap;gap:8px}
+.feed-item .body{color:var(--muted);line-height:1.6;font-size:.92rem}
+.empty{padding:52px 24px;text-align:center;color:var(--muted)}
+.empty .big{font-size:2.2rem;margin-bottom:10px;opacity:.6}
+
+/* endorsement quote */
+.endorse-quote{margin-top:14px;padding:14px 16px;border-left:3px solid var(--c2);
+  background:rgba(45,212,191,.06);border-radius:0 12px 12px 0}
+.endorse-quote b{font-size:.85rem}
+
+/* mentee card click */
+.mentee-card{cursor:pointer}
+.mini-progress{display:flex;gap:5px;margin-top:14px}
+.mini-progress i{flex:1;height:5px;border-radius:10px;background:rgba(255,255,255,.08)}
+.mini-progress i.on{background:linear-gradient(90deg,var(--c1),var(--c2))}
+
+/* timeline */
+.timeline{display:flex;margin:4px 0 28px}
+.tl-step{flex:1;text-align:center;position:relative;color:var(--muted);font-size:.8rem;font-weight:500}
+.tl-step::before{content:"";display:block;width:15px;height:15px;border-radius:50%;margin:0 auto 8px;
+  background:var(--glass2);border:2px solid var(--border);transition:all .4s}
+.tl-step::after{content:"";position:absolute;top:7px;left:calc(50% + 12px);width:calc(100% - 24px);height:2px;background:var(--border)}
+.tl-step:last-child::after{display:none}
+.tl-step.done{color:var(--ink)}
+.tl-step.done::before{background:linear-gradient(120deg,var(--c1),var(--c2));border-color:transparent;
+  box-shadow:0 0 14px rgba(124,108,255,.7)}
+
+/* tabs (detail view) */
+.tabs{display:inline-flex;gap:5px;background:var(--glass);border:1px solid var(--border);
+  padding:5px;border-radius:13px;margin-bottom:24px;flex-wrap:wrap}
+.tab{padding:9px 18px;border-radius:9px;cursor:pointer;font-size:.88rem;font-weight:600;
+  color:var(--muted);border:none;background:none;font:inherit;transition:all .22s}
+.tab:hover{color:#fff}
+.tab.active{color:#fff;background:linear-gradient(120deg,var(--c1),var(--c3))}
+
+/* modal */
+.modal-backdrop{position:fixed;inset:0;background:rgba(3,4,10,.72);backdrop-filter:blur(10px);
+  display:grid;place-items:center;z-index:100;animation:fadeIn .25s;padding:20px}
+.modal{width:min(680px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow-y:auto;padding:30px;
+  animation:popIn .35s cubic-bezier(.2,.9,.3,1.25)}
+.profile-modal .kv{grid-template-columns:minmax(90px,125px) 1fr;max-height:calc(100vh - 170px);overflow-y:auto}
+.profile-modal .modal-close{display:flex;justify-content:flex-end;margin-bottom:8px}
+.modal h3{margin-bottom:18px;font-size:1.2rem}
+@keyframes fadeIn{from{opacity:0}}
+@keyframes popIn{from{opacity:0;transform:scale(.93) translateY(16px)}}
+
+/* toast */
+.toast-root{position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:10px}
+.toast{padding:14px 22px;border-radius:14px;font-size:.9rem;font-weight:600;color:#fff;
+  background:linear-gradient(120deg,var(--c1),var(--c3));
+  box-shadow:0 16px 44px rgba(0,0,0,.55);animation:slideIn .4s cubic-bezier(.2,.9,.3,1.2)}
+.toast.error{background:linear-gradient(120deg,#a12744,var(--danger))}
+@keyframes slideIn{from{opacity:0;transform:translateX(70px)}}
+
+.notice{padding:14px 18px;border-radius:13px;font-size:.88rem;margin-bottom:20px;
+  background:rgba(251,191,36,.09);border:1px solid rgba(251,191,36,.35);color:var(--c4)}
+
+@media(max-width:900px){
+  .hero{grid-template-columns:1fr;padding-top:60px}
+  .preview{display:none}
+  .shell{grid-template-columns:1fr}
+  .sidebar{position:fixed;z-index:60;width:var(--sidebar-w);transform:translateX(-100%);transition:transform .3s}
+  .sidebar.open{transform:none}
+  .main{padding:24px 18px 70px}
+  .burger{display:inline-flex!important}
+  .kv{grid-template-columns:1fr}
+  .timeline{flex-direction:column;gap:20px}
+  .tl-step::after{display:none}
+}
+.burger{display:none;position:fixed;top:16px;left:16px;z-index:70;padding:10px 14px;border-radius:12px;
+  background:var(--glass2);border:1px solid var(--border);color:#fff;font-size:1.1rem;cursor:pointer;backdrop-filter:blur(14px)}
+</style>
+</head>
+<body>
+<div class="mesh"><i></i><i></i><i></i><i></i></div>
+<div class="gridlines"></div>
+<div class="noise"></div>
+<button class="burger hidden" id="burger">☰</button>
+
+<main id="app"></main>
+<div id="modal-root"></div>
+<div id="toast-root" class="toast-root"></div>
+
+<script>
+/* ================================================================
+   LUMEN — app logic
+   ================================================================ */
+const SUPABASE_URL  = "https://aucuneiijrffgjtkmjrm.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1Y3VuZWlpanJmZmdqdGttanJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTIzNjcsImV4cCI6MjEwNTY2ODM2N30.6H6-A1T1yFUz57pD983OE5XQwlejcEi7x7MzTUXBAEk";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const app  = document.getElementById("app");
+const modalRoot = document.getElementById("modal-root");
+let session = null, profile = null;
+const ui = { tab: "overview", mtab: "info", mentee: null, pendingOnly: true, hodView: "pending" };
+
+/* ---------------- utils ---------------- */
+const $  = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const initials = n => (n || "?").split(" ").map(w => w[0]).slice(0,2).join("").toUpperCase();
+const fmtDate  = d => new Date(d).toLocaleDateString("en-IN", { day:"numeric", month:"short", year:"numeric" });
+const relTime  = d => { const s = (Date.now() - new Date(d)) / 1e3;
+  if (s < 3600) return Math.max(1, s/60|0) + "m ago";
+  if (s < 86400) return (s/3600|0) + "h ago";
+  return fmtDate(d); };
+const DEPARTMENTS = ["Computer Science Engineering", "Information Science Engineering",
+  "Electronics and Communication Engineering", "Electrical Engineering", "Mechanical Engineering",
+  "Civil Engineering", "Chemical Engineering", "Aerospace Engineering", "Biomedical Engineering"];
+const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+const SEMESTERS = ["Sem 1", "Sem 2", "Sem 3", "Sem 4", "Sem 5", "Sem 6", "Sem 7", "Sem 8"];
+const SKILLS = ["Python", "Java", "C", "C++", "JavaScript", "React", "HTML/CSS", "SQL", "Data Structures",
+  "Algorithms", "Machine Learning", "Data Science", "Cloud Computing", "Embedded Systems", "CAD",
+  "Communication", "Leadership", "Problem Solving"];
+const departmentLabel = department => /information technology/i.test(department || "")
+  ? "Information Science Engineering" : department || "";
+const departmentOptions = selected => `<option value="">Select department</option>${DEPARTMENTS.map(d =>
+  `<option value="${esc(d)}" ${departmentLabel(selected) === d ? "selected" : ""}>${esc(d)}</option>`).join("")}`;
+const selectOptions = (options, selected, placeholder) => `<option value="">${placeholder}</option>${options.map(option =>
+  `<option value="${esc(option)}" ${selected === option ? "selected" : ""}>${esc(option)}</option>`).join("")}`;
+const skillPicker = selected => {
+  const selectedSkills = new Set(selected || []);
+  const options = [...new Set([...(selected || []), ...SKILLS])];
+  return `<div class="skill-picker" id="skill-picker">
+    <button class="skill-trigger" type="button"><span id="skill-summary">${selectedSkills.size ? `${selectedSkills.size} skills selected` : "Select skills"}</span><span>⌄</span></button>
+    <div class="skill-menu">${options.map(skill => `<label class="skill-option"><input type="checkbox" name="skills" value="${esc(skill)}" ${selectedSkills.has(skill) ? "checked" : ""}><span>${esc(skill)}</span></label>`).join("")}</div>
+  </div>`;
+};
+
+function toast(msg, isErr = false) {
+  const t = document.createElement("div");
+  t.className = "toast" + (isErr ? " error" : "");
+  t.textContent = msg;
+  document.getElementById("toast-root").appendChild(t);
+  setTimeout(() => t.remove(), 3800);
+}
+const openModal  = html => { modalRoot.innerHTML =
+  `<div class="modal-backdrop"><div class="glass modal">${html}</div></div>`;
+  $(".modal-backdrop").addEventListener("click", e => { if (e.target === e.currentTarget) closeModal(); }); };
+const closeModal = () => modalRoot.innerHTML = "";
+
+const stepOf = (ms, recs) =>
+  !ms?.length ? 0 : !recs?.length ? 1 : recs.some(r => r.status === "endorsed") ? 3 : 2;
+
+function timeline(step) {
+  const L = ["Profile shared","Mentor assigned","Recommendation","HOD endorsed"];
+  return `<div class="timeline">${L.map((l,i) =>
+    `<div class="tl-step ${i <= step ? "done" : ""}">${l}</div>`).join("")}</div>`;
+}
+
+/* ---------------- boot ---------------- */
+async function init() {
+  const { data } = await sb.auth.getSession();
+  session = data.session;
+  if (session) {
+    try { await loadProfile(); }
+    catch (e) { await sb.auth.signOut(); toast(e.message, true); }
+  }
+  sb.auth.onAuthStateChange(async (_e, s) => {
+    session = s;
+    if (s) {
+      try { await loadProfile(); location.hash = "#/dashboard"; }
+      catch (e) { profile = null; await sb.auth.signOut(); toast(e.message, true); }
+    } else profile = null;
+    route();
+  });
+  window.addEventListener("hashchange", route);
+  document.getElementById("burger").onclick = () =>
+    document.querySelector(".sidebar")?.classList.toggle("open");
+  route();
+}
+async function loadProfile() {
+  const { data, error } = await sb.from("profiles").select("*").eq("id", session.user.id).single();
+  if (!error) { profile = data; return profile; }
+  if (error.code !== "PGRST116") throw new Error(`Signed in, but your profile could not be loaded: ${error.message}`);
+
+  const metadata = session.user.user_metadata || {};
+  const { data: created, error: createError } = await sb.from("profiles").upsert({
+    id: session.user.id,
+    full_name: metadata.full_name || session.user.email.split("@")[0],
+    role: metadata.role || "mentee",
+    department: departmentLabel(metadata.department)
+  }).select().single();
+  if (createError) throw new Error(`Signed in, but your profile is missing and could not be created: ${createError.message}`);
+  profile = created; return profile;
+}
+
+function route() {
+  const burger = document.getElementById("burger");
+  document.querySelector(".sidebar")?.classList.remove("open");
+  if (!session || !profile) { burger.classList.add("hidden"); showLanding(); return; }
+  burger.classList.remove("hidden");
+  const h = location.hash;
+  if (h.startsWith("#/mentee/")) { ui.mentee = h.split("/")[2]; ui.mtab = "info"; renderMenteeDetail(); }
+  else { if (!h) location.hash = "#/dashboard";
+    profile.role === "mentee" ? renderMenteeDash() :
+    profile.role === "mentor" ? renderMentorDash() : renderHodDash(); }
+}
+
+/* ================================================================
+   LANDING + AUTH
+   ================================================================ */
+function showLanding() {
+  let role = "mentee", mode = "login";
+  app.innerHTML = `
+  <div class="landing">
+    <section class="hero">
+      <div>
+        <div class="eyebrow"><span class="pulse"></span>MENTOR-MENTEE APP FOR NITTE</div>
+        <h1>Guidance that <span class="grad-text">glows</span>.<br>Careers that follow.</h1>
+        <p class="sub">M&amp;M-Nitte connects mentees, mentors and HODs in one flowing workspace — share your
+        profile, receive mentor notes &amp; recommendations, and earn HOD endorsements that carry weight.</p>
+
+        <div class="role-pills" id="pills">
+          ${["mentee","mentor","hod"].map(r =>
+            `<span class="pill ${r==="mentee"?"active":""}" data-role="${r}">${r==="hod"?"HOD":r[0].toUpperCase()+r.slice(1)}</span>`).join("")}
+        </div>
+
+        <form class="glass auth hoverable" id="auth-form">
+          <h3 id="a-title">Create your account</h3>
+          <p class="muted" style="font-size:.85rem;margin-bottom:20px" id="a-sub">Join as a <b id="a-role" style="color:var(--ink)">Mentee</b></p>
+          <div id="a-extra">
+            <div class="field"><label>Full name</label><input id="f-name" placeholder="Aarav Sharma"></div>
+            <div class="field"><label for="f-dept">Department</label><select id="f-dept" required>${departmentOptions("")}</select></div>
+          </div>
+          <div class="field"><label for="f-email">Email</label><input id="f-email" type="email" autocomplete="email" placeholder="you@college.edu" required></div>
+          <div class="field"><label for="f-pass">Password</label><input id="f-pass" type="password" autocomplete="current-password" placeholder="Minimum 6 characters" minlength="6" required></div>
+          <button class="btn btn-block" id="btn-auth" type="submit">Create account →</button>
+          <div class="auth-tools"><span class="auth-switch" style="margin:0"><span id="a-msg"></span> <button class="link" id="btn-switch" type="button"></button></span><button class="link" id="btn-reset" type="button">Forgot password?</button></div>
+        </form>
+      </div>
+
+      <div class="preview" id="preview">
+        <div class="glass pv-card pv-1 float-anim">
+          <div class="row2"><span class="lbl">Mentee profile</span><span class="tag endorsed">verified</span></div>
+          <div class="row">
+            <div class="avatar">AS</div>
+            <div><b style="font-size:.92rem">Aarav Sharma</b><div class="muted" style="font-size:.75rem">CGPA 8.7 · 3rd Year</div></div>
+          </div>
+          <div style="margin-top:12px"><span class="chip">Python</span><span class="chip">React</span><span class="chip">SQL</span></div>
+          <div class="pv-bar"><i></i></div>
+        </div>
+        <div class="glass pv-card pv-2 float-anim">
+          <div class="row2"><span class="lbl">Mentor note</span><span class="tag strength">strength</span></div>
+          <p style="font-size:.85rem;line-height:1.55;color:var(--muted)">"Exceptional grasp of system design — push him toward the research lab."</p>
+        </div>
+        <div class="glass pv-card pv-3 float-anim">
+          <div class="row2"><span class="lbl">HOD endorsement</span><span class="tag endorsed">✦ endorsed</span></div>
+          <p style="font-size:.85rem;line-height:1.55;color:var(--muted)">"I endorse this recommendation — ready for the summer internship program."</p>
+        </div>
+      </div>
+    </section>
+  </div>`;
+
+  /* parallax tilt on preview */
+  const pv = $("#preview");
+  document.addEventListener("mousemove", e => {
+    if (!document.body.contains(pv)) return;
+    const x = (e.clientX / innerWidth - .5) * 14, y = (e.clientY / innerHeight - .5) * 10;
+    $(".pv-1").style.transform = `rotate(-4deg) translate(${x}px,${y}px)`;
+    $(".pv-2").style.transform = `rotate(3deg) translate(${-x*1.3}px,${-y}px)`;
+    $(".pv-3").style.transform = `rotate(-2deg) translate(${x*.8}px,${-y*1.2}px)`;
+  });
+
+  $("#pills").addEventListener("click", e => {
+    const p = e.target.closest(".pill"); if (!p) return;
+    role = p.dataset.role;
+    document.querySelectorAll(".pill").forEach(x => x.classList.toggle("active", x === p));
+    $("#a-role").textContent = role === "hod" ? "HOD" : role[0].toUpperCase() + role.slice(1);
+    $("#a-sub").innerHTML = `Join as a <b style="color:var(--ink)" id="a-role">${role === "hod" ? "HOD" : role[0].toUpperCase()+role.slice(1)}</b>`;
+  });
+
+  function setMode(m) {
+    mode = m; const login = m === "login";
+    $("#a-title").textContent = login ? "Welcome back" : "Create your account";
+    $("#a-sub").innerHTML = login
+      ? "Sign in as a mentee, mentor, or HOD with your account credentials."
+      : `Join as a <b style="color:var(--ink)" id="a-role">${role === "hod" ? "HOD" : role[0].toUpperCase()+role.slice(1)}</b>`;
+    $("#pills").style.display = login ? "none" : "";
+    $("#btn-auth").textContent = login ? "Sign in →" : "Create account →";
+    $("#a-extra").style.display = login ? "none" : "";
+    $("#f-dept").required = !login;
+    $("#btn-reset").style.display = login ? "inline" : "none";
+    $("#a-msg").textContent = login ? "New here?" : "Already have an account?";
+    $("#btn-switch").textContent = login ? "Create one" : "Sign in";
+  }
+  setMode("login");
+  $("#btn-switch").onclick = () => setMode(mode === "login" ? "signup" : "login");
+  $("#btn-reset").onclick = async () => {
+    const email = $("#f-email").value.trim().toLowerCase();
+    if (!email) { toast("Enter your email first.", true); $("#f-email").focus(); return; }
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
+    toast(error ? error.message : "Password reset email sent. Check your inbox.", !!error);
+  };
+
+  $("#auth-form").onsubmit = async e => {
+    e.preventDefault();
+    const btn = $("#btn-auth"); btn.disabled = true;
+    try {
+      const email = $("#f-email").value.trim().toLowerCase(), pass = $("#f-pass").value;
+      if (!email || !pass) throw new Error("Enter your email and password.");
+      if (mode === "login") {
+        const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+        if (error) throw error;
+      } else {
+        const { error } = await sb.auth.signUp({ email, password: pass,
+          options: { data: { full_name: $("#f-name").value.trim(), role, department: $("#f-dept").value.trim() } } });
+        if (error) throw error;
+        toast("Account created ✦ — if email confirmation is on, verify then sign in.");
+        setMode("login");
+      }
+    } catch (e) {
+      const message = /rate limit|rate exceeded/i.test(e.message)
+        ? "Email limit reached. Wait before trying again. If your account already exists, switch to Sign in and use your email and password."
+        : e.message;
+      toast(message, true);
+    }
+    btn.disabled = false;
+  };
+}
+
+/* ================================================================
+   APP SHELL (sidebar layout)
+   ================================================================ */
+function shell(items, active, foot, content) {
+  return `
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark" aria-label="NMAMIT Nitte logo">NMAMIT</div>
+        <div><b>NMAMIT</b><small>Nitte</small></div></div>
+      <nav class="snav">
+        ${items.map(([k, icon, label]) =>
+          `<button class="${k === active ? "active" : ""}" data-nav="${k}"><span class="ico">${icon}</span>${label}</button>`).join("")}
+      </nav>
+      <div class="sidebar-foot">
+        <div class="row">
+          <div class="avatar" style="width:38px;height:38px">${initials(profile.full_name)}</div>
+          <div class="who"><b>${esc(profile.full_name)}</b><span>${profile.role}</span></div>
+          <button class="link" id="btn-out" title="Sign out">⏻</button>
+        </div>
+      </div>
+    </aside>
+    <section class="main">${content}</section>
+  </div>`;
+}
+function bindShell(items, onNav) {
+  document.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => onNav(b.dataset.nav));
+  $("#btn-out").onclick = async () => { await sb.auth.signOut(); location.hash = ""; };
+}
+
+/* ================================================================
+   MENTEE DASHBOARD
+   ================================================================ */
+async function renderMenteeDash() {
+  const [{ data: details }, { data: ms }, { data: notes }, { data: recs }] = await Promise.all([
+    sb.from("mentee_details").select("*").eq("id", profile.id).single(),
+    sb.from("mentorships").select("id, created_at, mentor:mentor_id(full_name, department)").eq("mentee_id", profile.id),
+    sb.from("notes").select("*").eq("mentee_id", profile.id).order("created_at", { ascending:false }),
+    sb.from("recommendations").select("*, endorsements(comment, created_at, hod:hod_id(full_name))")
+      .eq("mentee_id", profile.id).order("created_at", { ascending:false })
+  ]);
+  const step = stepOf(ms, recs);
+  const nEndorsed = (recs || []).filter(r => r.status === "endorsed").length;
+  const d = details || {};
+  const completedFields = [profile.full_name, profile.department, d.student_id, d.cgpa, d.year,
+    d.semester, d.skills?.length, d.career_goals, d.achievements, d.project_links, d.bio]
+    .filter(value => value !== null && value !== undefined && value !== "" && value !== 0).length;
+  const profilePercent = Math.round(completedFields / 11 * 100);
+  const T = [["overview","◈","Overview"],["profile","✎","My Profile"],
+             ["notes","✉","Notes"],["recs","✦","Recommendations"]];
+  let body = "";
+
+  if (ui.tab === "overview") body = `
+    ${timeline(step)}
+    <div class="grid g3">
+      <div class="glass pad stat s1 hoverable"><div class="num">${ms?.length||0}</div><div class="lbl">Mentors</div></div>
+      <div class="glass pad stat s2 hoverable"><div class="num">${notes?.length||0}</div><div class="lbl">Notes received</div></div>
+      <div class="glass pad stat s3 hoverable"><div class="num">${nEndorsed}</div><div class="lbl">Endorsed recs</div></div>
+    </div>
+    <div class="profile-meter">
+      <div class="meter-head"><b>Profile completion</b><span>${profilePercent}%</span></div>
+      <div class="meter-track"><i style="width:${profilePercent}%"></i></div>
+      <button class="link" id="btn-complete-profile" style="margin-top:12px">${profilePercent === 100 ? "Review your profile" : "Complete your profile →"}</button>
+    </div>
+    <div class="glass pad hoverable" style="margin-top:18px">
+      <h3 style="margin-bottom:14px">Your mentors</h3>
+      ${ms?.length ? ms.map(m => `
+        <div class="row" style="padding:11px 0;border-bottom:1px solid var(--border)">
+          <div class="avatar">${initials(m.mentor.full_name)}</div>
+          <div class="grow"><b>${esc(m.mentor.full_name)}</b>
+            <div class="muted" style="font-size:.8rem">${esc(departmentLabel(m.mentor.department)||"Faculty")} · since ${fmtDate(m.created_at)}</div></div>
+          <span class="tag endorsed">active</span>
+        </div>`).join("") : `<p class="muted">No mentor assigned yet — once a mentor adopts your profile, they'll appear here and can start guiding you.</p>`}
+    </div>`;
+
+  if (ui.tab === "profile") { const d = details || {}; body = `
+    <div class="glass pad hoverable" style="max-width:740px">
+      <h3>Mentee information</h3>
+      <p class="muted" style="margin:6px 0 20px;font-size:.88rem">This is exactly what your mentor and HOD will see.</p>
+      <form id="pform">
+        <div class="grid g2" style="gap:14px">
+          <div class="field"><label>Student ID</label><input name="student_id" value="${esc(d.student_id||"")}" placeholder="CS21A42"></div>
+          <div class="field"><label>CGPA (0–10)</label><input name="cgpa" type="number" step="0.01" min="0" max="10" value="${d.cgpa??""}"></div>
+          <div class="field"><label for="p-year">Year</label><select id="p-year" name="year" required>${selectOptions(YEARS, d.year||"", "Select year")}</select></div>
+          <div class="field"><label for="p-semester">Semester</label><select id="p-semester" name="semester" required>${selectOptions(SEMESTERS, d.semester||"", "Select semester")}</select></div>
+          <div class="field"><label for="p-department">Department</label><select id="p-department" name="department" required>${departmentOptions(profile.department||"")}</select></div>
+        </div>
+        <div class="field"><label for="skill-picker">Skills</label>${skillPicker(d.skills||[])}</div>
+        <div class="field"><label>Career goals</label><textarea name="career_goals" placeholder="Where do you see yourself in 3 years?">${esc(d.career_goals||"")}</textarea></div>
+        <div class="field"><label>Achievements</label><textarea name="achievements" placeholder="Hackathons, papers, certifications…">${esc(d.achievements||"")}</textarea></div>
+        <div class="field"><label>Project links</label><input name="project_links" value="${esc(d.project_links||"")}" placeholder="github.com/you"></div>
+        <div class="field"><label>Bio</label><textarea name="bio" placeholder="A short intro about yourself">${esc(d.bio||"")}</textarea></div>
+        <button class="btn">Save information ✦</button>
+      </form>
+    </div>`; }
+
+  if (ui.tab === "notes") body = notes?.length ? notes.map(n => `
+    <div class="glass feed-item hoverable">
+      <div class="meta"><b>${esc(n.title)}</b>
+        <span style="display:flex;gap:8px;align-items:center"><span class="tag ${n.category}">${n.category}</span>
+        <span class="muted" style="font-size:.8rem">${relTime(n.created_at)}</span></span></div>
+      <p class="body">${esc(n.content)}</p>
+    </div>`).join("") : `<div class="glass empty"><div class="big">✉</div>No notes yet — your mentor's guidance will appear here.</div>`;
+
+  if (ui.tab === "recs") body = recs?.length ? recs.map(r => `
+    <div class="glass feed-item hoverable">
+      <div class="meta"><b>${esc(r.title)}</b><span class="tag ${r.status}">${r.status}</span></div>
+      <p class="body">${esc(r.body)}</p>
+      <div style="margin-top:6px">${(r.skill_tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>
+      ${r.status === "endorsed" || r.endorsements?.length ? `
+        <div class="endorse-quote">
+          <b>✦ Endorsed by ${r.endorsements?.[0]?.hod?.full_name ? `${esc(r.endorsements[0].hod.full_name)} · ` : ""}HOD</b>
+          ${r.endorsements?.[0]?.comment ? `<p class="body" style="margin-top:5px">“${esc(r.endorsements[0].comment)}”</p>` : ""}
+        </div>` : `<p class="muted" style="margin-top:12px;font-size:.82rem">⏳ Awaiting HOD endorsement…</p>`}
+    </div>`).join("") : `<div class="glass empty"><div class="big">✦</div>No recommendations yet.</div>`;
+
+  app.innerHTML = shell(T, ui.tab, "", `
+    <div class="page-head"><div><h2>Hello, ${esc(profile.full_name.split(" ")[0])} ✦</h2>
+    <p>Your mentorship journey at a glance</p></div></div>${body}`);
+  bindShell(T, k => { ui.tab = k; renderMenteeDash(); });
+  if ($("#btn-complete-profile")) $("#btn-complete-profile").onclick = () => { ui.tab = "profile"; renderMenteeDash(); };
+
+  const picker = $("#skill-picker");
+  if (picker) {
+    const updateSkillSummary = () => {
+      const count = picker.querySelectorAll("input[name='skills']:checked").length;
+      $("#skill-summary").textContent = count ? `${count} skills selected` : "Select skills";
+    };
+    picker.querySelector(".skill-trigger").onclick = () => picker.classList.toggle("open");
+    picker.querySelectorAll("input[name='skills']").forEach(input => input.onchange = updateSkillSummary);
+  }
+
+  const f = $("#pform");
+  if (f) f.addEventListener("submit", async e => {
+    e.preventDefault();
+    const fd = new FormData(f);
+    const { error: profileError } = await sb.from("profiles").update({
+      department: fd.get("department") }).eq("id", profile.id);
+    const { error: detailsError } = await sb.from("mentee_details").upsert({ id: profile.id,
+      student_id: fd.get("student_id") || null, cgpa: fd.get("cgpa") || null,
+      year: fd.get("year"), semester: fd.get("semester"),
+      skills: fd.getAll("skills").filter(Boolean),
+      career_goals: fd.get("career_goals"), achievements: fd.get("achievements"),
+      project_links: fd.get("project_links"), bio: fd.get("bio"),
+      updated_at: new Date().toISOString() });
+    profile.department = fd.get("department");
+    const error = profileError || detailsError;
+    toast(error ? error.message : "Profile saved ✦", !!error);
+  });
+}
+
+/* ================================================================
+   MENTOR DASHBOARD
+   ================================================================ */
+async function renderMentorDash() {
+  const { data: mine } = await sb.from("mentorships")
+    .select("id, created_at, mentee:mentee_id(id, full_name, department)")
+    .eq("mentor_id", profile.id).order("created_at", { ascending:false });
+  const ids = (mine || []).map(m => m.mentee.id);
+  const { data: dRows } = ids.length
+    ? await sb.from("mentee_details").select("id, skills, cgpa, year") : { data: [] };
+  const D = Object.fromEntries((dRows || []).map(d => [d.id, d]));
+  const { data: allNotes } = ids.length
+    ? await sb.from("notes").select("mentee_id").in("mentee_id", ids) : { data: [] };
+  const noteCount = id => (allNotes || []).filter(n => n.mentee_id === id).length;
+
+  const T = [["mentees","◈","My Mentees"]];
+  app.innerHTML = shell(T, "mentees", "", `
+    <div class="page-head">
+      <div><h2>Mentor Studio</h2><p>Guide your mentees with notes &amp; recommendations</p></div>
+      <button class="btn btn-teal btn-sm" id="btn-browse">+ Adopt a new mentee</button>
+    </div>
+    <input class="search-box" id="mentee-search" type="search" placeholder="Search mentees..." aria-label="Search mentees">
+    <div class="grid g3">
+      ${(mine || []).map(m => { const d = D[m.mentee.id] || {}; return `
+        <div class="glass pad mentee-card hoverable" data-mentee-card data-search="${esc(`${m.mentee.full_name} ${m.mentee.department||""} ${(d.skills||[]).join(" ")}`.toLowerCase())}" onclick="location.hash='#/mentee/${m.mentee.id}'">
+          <div class="row">
+            <div class="avatar">${initials(m.mentee.full_name)}</div>
+            <div class="grow"><b>${esc(m.mentee.full_name)}</b>
+              <div class="muted" style="font-size:.78rem">${esc(departmentLabel(m.mentee.department))}</div></div>
+          </div>
+          <div style="margin-top:14px">${(d.skills||[]).slice(0,3).map(s=>`<span class="chip">${esc(s)}</span>`).join("") || '<span class="muted" style="font-size:.8rem">No skills listed</span>'}</div>
+          <div class="muted" style="margin-top:10px;font-size:.82rem">
+            CGPA ${d.cgpa ?? "—"} · ${esc(d.year||"")} · ${noteCount(m.mentee.id)} notes</div>
+          <div class="mini-progress"><i class="on"></i><i class="${noteCount(m.mentee.id) ? "on" : ""}"></i><i></i></div>
+        </div>`; }).join("") || `<div class="glass empty" style="grid-column:1/-1"><div class="big">◈</div>You haven't adopted any mentees yet — click “Adopt a new mentee”.</div>`}
+    </div>`);
+  bindShell(T, () => {});
+
+  $("#mentee-search").oninput = e => {
+    const query = e.target.value.toLowerCase().trim();
+    document.querySelectorAll("[data-mentee-card]").forEach(card => {
+      card.style.display = !query || card.dataset.search.includes(query) ? "" : "none";
+    });
+  };
+
+  $("#btn-browse").onclick = async () => {
+    const { data: all } = await sb.from("profiles").select("id, full_name, department").eq("role", "mentee");
+    const taken = new Set(ids);
+    const avail = (all || []).filter(p => !taken.has(p.id));
+    openModal(`
+      <h3>Adopt a mentee</h3>
+      ${avail.length ? avail.map(p => `
+        <div class="row" style="padding:11px 0;border-bottom:1px solid var(--border)">
+          <div class="avatar" style="width:38px;height:38px">${initials(p.full_name)}</div>
+          <div class="grow"><b style="font-size:.9rem">${esc(p.full_name)}</b>
+            <div class="muted" style="font-size:.78rem">${esc(departmentLabel(p.department))}</div></div>
+          <button class="btn btn-sm" data-adopt="${p.id}">Adopt</button>
+        </div>`).join("") : `<p class="muted">All mentees already have mentors.</p>`}
+      <button class="btn btn-ghost btn-block" onclick="closeModal()">Close</button>`);
+    modalRoot.querySelectorAll("[data-adopt]").forEach(b => b.onclick = async () => {
+      const { error } = await sb.from("mentorships").insert({ mentee_id: b.dataset.adopt, mentor_id: profile.id });
+      toast(error ? error.message : "Mentee adopted ✦", !!error);
+      closeModal(); renderMentorDash();
+    });
+  };
+}
+
+/* -------- mentor → single mentee workspace -------- */
+async function renderMenteeDetail() {
+  const mid = ui.mentee;
+  const [{ data: m }, { data: d }, { data: notes }, { data: recs }] = await Promise.all([
+    sb.from("profiles").select("*").eq("id", mid).single(),
+    sb.from("mentee_details").select("*").eq("id", mid).single(),
+    sb.from("notes").select("*").eq("mentee_id", mid).order("created_at", { ascending:false }),
+    sb.from("recommendations").select("*, endorsements(comment, hod:hod_id(full_name))")
+      .eq("mentee_id", mid).order("created_at", { ascending:false })
+  ]);
+  if (!m) { location.hash = "#/dashboard"; return; }
+  const d2 = d || {};
+  const tabs = [["info","Profile"],["notes",`Notes (${notes?.length||0})`],["recs",`Recommendations (${recs?.length||0})`]];
+  let body = "";
+
+  if (ui.mtab === "info") body = `
+    <div class="grid g2">
+      <div class="glass pad hoverable"><h3>Academics</h3>
+        <dl class="kv">
+          <dt>Student ID</dt><dd>${esc(d2.student_id||"—")}</dd>
+          <dt>Year / Sem</dt><dd>${esc(d2.year||"—")} ${esc(d2.semester||"")}</dd>
+          <dt>CGPA</dt><dd>${d2.cgpa ?? "—"}</dd>
+          <dt>Skills</dt><dd>${(d2.skills||[]).map(s=>`<span class="chip">${esc(s)}</span>`).join("")||"—"}</dd>
+          <dt>Projects</dt><dd>${esc(d2.project_links||"—")}</dd>
+        </dl></div>
+      <div class="glass pad hoverable"><h3>Aspirations</h3>
+        <p class="muted" style="line-height:1.65"><b style="color:var(--ink)">Goals:</b> ${esc(d2.career_goals||"—")}</p>
+        <hr class="hr">
+        <p class="muted" style="line-height:1.65"><b style="color:var(--ink)">Achievements:</b> ${esc(d2.achievements||"—")}</p>
+        <hr class="hr">
+        <p class="muted" style="line-height:1.65"><b style="color:var(--ink)">Bio:</b> ${esc(d2.bio||"—")}</p></div>
+    </div>`;
+
+  if (ui.mtab === "notes") body = `
+    <button class="btn btn-teal btn-sm" id="btn-note">+ Add note</button>
+    <div style="margin-top:16px">${notes?.length ? notes.map(n => `
+      <div class="glass feed-item hoverable">
+        <div class="meta"><b>${esc(n.title)}</b>
+          <span style="display:flex;gap:8px"><span class="tag ${n.category}">${n.category}</span>
+          <span class="muted" style="font-size:.8rem">${relTime(n.created_at)}</span></span></div>
+        <p class="body">${esc(n.content)}</p>
+      </div>`).join("") : `<div class="glass empty"><div class="big">✉</div>No notes yet.</div>`}</div>`;
+
+  if (ui.mtab === "recs") body = `
+    <button class="btn btn-sm" id="btn-rec">+ Write recommendation</button>
+    <div style="margin-top:16px">${recs?.length ? recs.map(r => `
+      <div class="glass feed-item hoverable">
+        <div class="meta"><b>${esc(r.title)}</b><span class="tag ${r.status}">${r.status}</span></div>
+        <p class="body">${esc(r.body)}</p>
+        <div style="margin-top:6px">${(r.skill_tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>
+        ${r.endorsements?.length ? `<div class="endorse-quote"><b>✦ Endorsed by HOD ${esc(r.endorsements[0].hod.full_name)}</b>
+          <p class="body" style="margin-top:4px">“${esc(r.endorsements[0].comment)}”</p></div>` : ""}
+      </div>`).join("") : `<div class="glass empty"><div class="big">✦</div>No recommendations yet.</div>`}</div>`;
+
+  const T = [["mentees","◈","My Mentees"]];
+  app.innerHTML = shell(T, "mentees", "", `
+    <button class="link" onclick="location.hash='#/dashboard'" style="margin-bottom:18px">← All mentees</button>
+    <div class="page-head">
+      <div class="row">
+        <div class="avatar" style="width:56px;height:56px;font-size:1.1rem">${initials(m.full_name)}</div>
+        <div><h2>${esc(m.full_name)}</h2>
+        <p>${esc(departmentLabel(m.department))} ${d2.student_id ? "· " + esc(d2.student_id) : ""}</p></div>
+      </div>
+    </div>
+    <div class="tabs">${tabs.map(([k,l]) =>
+      `<button class="tab ${ui.mtab===k?"active":""}" data-t="${k}">${l}</button>`).join("")}</div>
+    ${body}`);
+  bindShell(T, () => location.hash = "#/dashboard");
+  document.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { ui.mtab = b.dataset.t; renderMenteeDetail(); });
+
+  const msId = async () => (await sb.from("mentorships").select("id")
+    .eq("mentor_id", profile.id).eq("mentee_id", mid).single()).data.id;
+
+  if ($("#btn-note")) $("#btn-note").onclick = () => {
+    openModal(`
+      <h3>New note — ${esc(m.full_name)}</h3>
+      <form id="nf">
+        <div class="field"><label>Title</label><input name="title" required placeholder="e.g. Strong progress on DBMS project"></div>
+        <div class="field"><label>Category</label>
+          <select name="category"><option value="general">General</option><option value="strength">Strength</option>
+          <option value="improvement">Needs improvement</option><option value="goal">Goal</option></select></div>
+        <div class="field"><label>Note</label><textarea name="content" required placeholder="Your guidance…"></textarea></div>
+        <button class="btn btn-block">Save note</button>
+      </form>`);
+    $("#nf").addEventListener("submit", async e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const { error } = await sb.from("notes").insert({
+        mentorship_id: await msId(), author_id: profile.id, mentee_id: mid,
+        title: fd.get("title"), content: fd.get("content"), category: fd.get("category") });
+      toast(error ? error.message : "Note added ✦", !!error);
+      closeModal(); renderMenteeDetail();
+    });
+  };
+
+  if ($("#btn-rec")) $("#btn-rec").onclick = () => {
+    openModal(`
+      <h3>Recommendation — ${esc(m.full_name)}</h3>
+      <form id="rf">
+        <div class="field"><label>Title</label><input name="title" required placeholder="e.g. Recommended for Research Internship"></div>
+        <div class="field"><label>Recommendation</label><textarea name="body" required placeholder="Why do you recommend them?"></textarea></div>
+        <div class="field"><label>Skill tags (comma separated)</label><input name="skill_tags" placeholder="Leadership, React, Research"></div>
+        <button class="btn btn-block">Submit for HOD endorsement</button>
+      </form>`);
+    $("#rf").addEventListener("submit", async e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const { error } = await sb.from("recommendations").insert({
+        mentorship_id: await msId(), mentor_id: profile.id, mentee_id: mid,
+        title: fd.get("title"), body: fd.get("body"),
+        skill_tags: fd.get("skill_tags").split(",").map(s=>s.trim()).filter(Boolean) });
+      toast(error ? error.message : "Recommendation sent ✦", !!error);
+      closeModal(); renderMenteeDetail();
+    });
+  };
+}
+
+/* ================================================================
+   HOD DASHBOARD
+   ================================================================ */
+async function renderHodDash() {
+  const [{ data: allRecs }, { data: endorsed }, { data: mentees }, { data: menteeDetails }] = await Promise.all([
+    sb.from("recommendations").select("*, mentee:mentee_id(full_name, department), mentor:mentor_id(full_name), endorsements(id)")
+      .order("created_at", { ascending:false }),
+    sb.from("endorsements").select("*, recommendation:recommendation_id(title, mentee:mentee_id(full_name))")
+      .eq("hod_id", profile.id).order("created_at", { ascending:false }),
+    sb.from("profiles").select("id, full_name, department").eq("role", "mentee").order("full_name"),
+    sb.from("mentee_details").select("*")
+  ]);
+  const pending = (allRecs || []).filter(r => r.status === "pending" && !r.endorsements?.length);
+  const detailsById = Object.fromEntries((menteeDetails || []).map(d => [d.id, d]));
+  const T = [["pending","⧗","Pending review"],["history","✦","My endorsements"],["mentees","◈","All mentees"],["analytics","▥","Reports & analytics"]];
+  const active = ui.hodView;
+  let body = "";
+
+  if (ui.hodView === "pending") body = pending.length ? pending.map(r => `
+    <div class="glass feed-item hoverable">
+      <div class="meta"><b>${esc(r.title)}</b><span class="tag pending">pending</span></div>
+      <p class="body" style="margin-bottom:8px">Mentee: <b style="color:var(--ink)">${esc(r.mentee.full_name)}</b>
+        (${esc(departmentLabel(r.mentee.department))}) · Mentor: ${esc(r.mentor.full_name)} · ${relTime(r.created_at)}</p>
+      <p class="body">${esc(r.body)}</p>
+      <div style="margin:8px 0 12px">${(r.skill_tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-teal btn-sm" data-end="${r.id}">✦ Endorse</button>
+        <button class="btn btn-ghost btn-sm" data-view="${r.mentee.full_name}" data-view-id="${r.mentee_id ? "" : ""}">View mentee profile</button>
+      </div>
+    </div>`).join("") : `<div class="glass empty"><div class="big">⧗</div>All caught up — nothing awaiting endorsement.</div>`;
+  else if (ui.hodView === "history") body = endorsed?.length ? endorsed.map(e => `
+    <div class="glass feed-item hoverable">
+      <div class="meta"><b>${esc(e.recommendation.title)}</b>
+        <span class="muted" style="font-size:.8rem">${fmtDate(e.created_at)}</span></div>
+      <p class="body">Mentee: <b style="color:var(--ink)">${esc(e.recommendation.mentee.full_name)}</b></p>
+      <div class="endorse-quote" style="margin-top:10px"><b>Your comment</b>
+        <p class="body" style="margin-top:4px">“${esc(e.comment)}”</p></div>
+    </div>`).join("") : `<div class="glass empty"><div class="big">✦</div>No endorsements yet.</div>`;
+  else if (ui.hodView === "mentees") body = mentees?.length ? `<input class="search-box" id="hod-mentee-search" type="search" placeholder="Search mentees..." aria-label="Search all mentees"><div class="grid hod-mentee-grid">${mentees.map(m => { const d = detailsById[m.id] || {}; return `
+    <div class="glass hod-mentee-card hoverable" data-hod-mentee data-hod-profile="${m.id}" tabindex="0" role="button" data-search="${esc(`${m.full_name} ${m.department||""} ${(d.skills||[]).join(" ")} ${d.year||""}`.toLowerCase())}">
+      <div class="row"><div class="avatar">${initials(m.full_name)}</div>
+        <div class="grow"><h3>${esc(m.full_name)}</h3><p class="muted">${esc(departmentLabel(m.department)||"Department not set")}</p></div></div>
+      <dl class="kv">
+        <dt>Student ID</dt><dd>${esc(d.student_id||"—")}</dd>
+        <dt>Year / Sem</dt><dd>${esc(d.year||"—")} ${esc(d.semester||"")}</dd>
+        <dt>CGPA</dt><dd>${d.cgpa ?? "—"}</dd>
+        <dt>Skills</dt><dd>${(d.skills||[]).map(s=>`<span class="chip">${esc(s)}</span>`).join("")||"—"}</dd>
+        <dt>Goals</dt><dd>${esc(d.career_goals||"—")}</dd>
+        <dt>Achievements</dt><dd>${esc(d.achievements||"—")}</dd>
+        <dt>Projects</dt><dd>${esc(d.project_links||"—")}</dd>
+        <dt>Bio</dt><dd>${esc(d.bio||"—")}</dd>
+      </dl>
+    </div>`; }).join("")}</div>` : `<div class="glass empty"><div class="big">◈</div>No mentee profiles yet.</div>`;
+  else {
+    const countBy = (rows, key) => rows.reduce((counts, row) => {
+      const value = key(row) || "Not specified";
+      counts[value] = (counts[value] || 0) + 1;
+      return counts;
+    }, {});
+    const departmentCounts = countBy(mentees || [], m => departmentLabel(m.department));
+    const yearCounts = countBy(mentees || [], m => detailsById[m.id]?.year);
+    const statusCounts = countBy(allRecs || [], r => r.status);
+    const mentorCounts = countBy(allRecs || [], r => r.mentor?.full_name);
+    const endorsedCount = (allRecs || []).filter(r => r.status === "endorsed").length;
+    const endorsementRate = allRecs?.length ? Math.round(endorsedCount / allRecs.length * 100) : 0;
+    const breakdown = (title, counts) => `<div class="glass pad"><h3 style="margin-bottom:14px">${title}</h3>
+      ${Object.entries(counts).sort((a,b) => b[1] - a[1]).map(([label, count]) => `<div class="row" style="margin:12px 0">
+        <span class="grow" style="font-size:.88rem">${esc(label)}</span><b>${count}</b></div>
+        <div class="meter-track"><i style="width:${Math.round(count / Math.max(...Object.values(counts), 1) * 100)}%"></i></div>`).join("") || `<p class="muted">No data yet.</p>`}</div>`;
+    body = `<div class="page-head"><div><h3>Mentorship performance overview</h3><p>Live metrics from current mentee profiles and recommendations.</p></div>
+        <button class="btn btn-teal btn-sm" id="btn-export-report">⇩ Export CSV</button></div>
+      <div class="grid g3">
+        <div class="glass pad stat s1 hoverable"><div class="num">${mentees?.length || 0}</div><div class="lbl">Total mentees</div></div>
+        <div class="glass pad stat s2 hoverable"><div class="num">${new Set((allRecs || []).map(r => r.mentor_id)).size}</div><div class="lbl">Active mentors</div></div>
+        <div class="glass pad stat s3 hoverable"><div class="num">${endorsementRate}%</div><div class="lbl">Endorsement rate</div></div>
+        <div class="glass pad stat s4 hoverable"><div class="num">${(allRecs || []).length}</div><div class="lbl">Recommendations</div></div>
+      </div>
+      <div class="grid g2" style="margin-top:18px">
+        ${breakdown("Mentees by department", departmentCounts)}
+        ${breakdown("Mentees by year", yearCounts)}
+        ${breakdown("Recommendation status", statusCounts)}
+        ${breakdown("Recommendations by mentor", mentorCounts)}
+      </div>`;
+  }
+
+  app.innerHTML = shell(T, active, "", `
+    <div class="page-head"><div><h2>HOD Console</h2><p>${ui.hodView === "mentees" ? "View all mentee information" : ui.hodView === "analytics" ? "Track mentorship activity and outcomes" : "Endorse mentor recommendations"}</p></div></div>
+    <div class="grid g3" style="margin-bottom:24px">
+      <div class="glass pad stat s4 hoverable"><div class="num">${pending.length}</div><div class="lbl">Awaiting review</div></div>
+      <div class="glass pad stat s2 hoverable"><div class="num">${endorsed?.length||0}</div><div class="lbl">Endorsed by you</div></div>
+      <div class="glass pad stat s1 hoverable"><div class="num">${(allRecs||[]).length}</div><div class="lbl">Total recommendations</div></div>
+    </div>
+    ${body}`);
+  bindShell(T, k => { ui.hodView = k; ui.pendingOnly = k === "pending"; renderHodDash(); });
+
+  if ($("#hod-mentee-search")) $("#hod-mentee-search").oninput = e => {
+    const query = e.target.value.toLowerCase().trim();
+    document.querySelectorAll("[data-hod-mentee]").forEach(card => {
+      card.style.display = !query || card.dataset.search.includes(query) ? "" : "none";
+    });
+  };
+
+  if (ui.hodView !== "analytics") app.querySelectorAll(".stat").forEach((card, index) => card.onclick = () => {
+    if (index === 0) { ui.hodView = "pending"; renderHodDash(); }
+    if (index === 1) { ui.hodView = "history"; renderHodDash(); }
+  });
+
+  app.querySelectorAll("[data-view]").forEach(b => b.onclick = async () => {
+    const row = pending.find(r => r.mentee.full_name === b.dataset.view);
+    const { data: d } = await sb.from("mentee_details").select("*").eq("id", row.mentee_id || row.mentee.id).single();
+    openModal(`<div class="profile-modal">
+      <div class="modal-close"><button class="btn btn-ghost btn-sm" type="button" id="btn-close-profile">✕ Close</button></div>
+      <h3>${esc(row.mentee.full_name)} — full profile</h3>
+      <dl class="kv">
+        <dt>Student ID</dt><dd>${esc(d?.student_id||"—")}</dd>
+        <dt>Year / Sem</dt><dd>${esc(d?.year||"—")} ${esc(d?.semester||"")}</dd>
+        <dt>CGPA</dt><dd>${d?.cgpa ?? "—"}</dd>
+        <dt>Skills</dt><dd>${(d?.skills||[]).map(s=>`<span class="chip">${esc(s)}</span>`).join("")||"—"}</dd>
+        <dt>Goals</dt><dd>${esc(d?.career_goals||"—")}</dd>
+        <dt>Achievements</dt><dd>${esc(d?.achievements||"—")}</dd>
+      </dl>
+      </div>`);
+    $("#btn-close-profile").onclick = closeModal;
+  });
+
+  app.querySelectorAll("[data-hod-profile]").forEach(card => {
+    const openProfile = () => {
+      const mentee = (mentees || []).find(m => m.id === card.dataset.hodProfile);
+      const d = detailsById[card.dataset.hodProfile] || {};
+      if (!mentee) return;
+      openModal(`<div class="profile-modal">
+        <div class="modal-close"><button class="btn btn-ghost btn-sm" type="button" id="btn-close-hod-profile">✕ Close</button></div>
+        <h3>${esc(mentee.full_name)} — full profile</h3>
+        <dl class="kv">
+          <dt>Department</dt><dd>${esc(departmentLabel(mentee.department) || "—")}</dd>
+          <dt>Student ID</dt><dd>${esc(d.student_id || "—")}</dd>
+          <dt>Year / Sem</dt><dd>${esc(d.year || "—")} ${esc(d.semester || "")}</dd>
+          <dt>CGPA</dt><dd>${d.cgpa ?? "—"}</dd>
+          <dt>Skills</dt><dd>${(d.skills || []).map(s => `<span class="chip">${esc(s)}</span>`).join("") || "—"}</dd>
+          <dt>Goals</dt><dd>${esc(d.career_goals || "—")}</dd>
+          <dt>Achievements</dt><dd>${esc(d.achievements || "—")}</dd>
+          <dt>Projects</dt><dd>${esc(d.project_links || "—")}</dd>
+          <dt>Bio</dt><dd>${esc(d.bio || "—")}</dd>
+        </dl>
+      </div>`);
+      $("#btn-close-hod-profile").onclick = closeModal;
+    };
+    card.onclick = openProfile;
+    card.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openProfile(); } };
+  });
+
+  app.querySelectorAll("[data-end]").forEach(b => b.onclick = () => {
+    openModal(`
+      <h3>Endorse recommendation ✦</h3>
+      <form id="ef">
+        <div class="field"><label>Your endorsement comment</label>
+          <textarea name="comment" required placeholder="I endorse this recommendation because…"></textarea></div>
+        <button class="btn btn-teal btn-block">Confirm endorsement</button>
+      </form>`);
+    $("#ef").addEventListener("submit", async e => {
+      e.preventDefault();
+      const comment = new FormData(e.target).get("comment");
+      const { error: e1 } = await sb.from("endorsements")
+        .insert({ recommendation_id: b.dataset.end, hod_id: profile.id, comment });
+      const { error: e2 } = e1 ? { error: e1 } : await sb.from("recommendations")
+        .update({ status: "endorsed" }).eq("id", b.dataset.end);
+      toast((e1||e2) ? (e1||e2).message : "Endorsed ✦", !!(e1||e2));
+      closeModal(); renderHodDash();
+    });
+  });
+
+  if ($("#btn-export-report")) $("#btn-export-report").onclick = () => {
+    const rows = [["Mentee", "Department", "Year", "CGPA", "Recommendation", "Mentor", "Status", "Created"]];
+    (allRecs || []).forEach(r => {
+      const d = detailsById[r.mentee_id] || {};
+      rows.push([r.mentee?.full_name, r.mentee?.department, d.year, d.cgpa, r.title,
+        r.mentor?.full_name, r.status, r.created_at]);
+    });
+    const csv = rows.map(row => row.map(value => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `mentorship-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+}
+
+init();
+</script>
+</body>
+</html>
